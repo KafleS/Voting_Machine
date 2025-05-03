@@ -1,54 +1,47 @@
-package display;
+package Display;
 
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.application.Application;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class DisplayJavaFX extends Application {
     private Stage stage;
-
     private Template template;
     private Listener listener;
     private boolean failed = false;
     private boolean ready = true;
-    private Label titleLabel;
-    private VBox questionBox;
-    private Button leftButton, middleButton, rightButton;
-    private BorderPane root;
 
     @Override
     public void start(Stage primaryStage) {
         this.stage = primaryStage;
 
-        try (ServerSocket serverSocket = new ServerSocket(12345)) {
-            while (!serverSocket.isClosed()) {
-                System.out.printf("Port opened @ %s. Waiting for connection...\n", 12345);
-                Socket socket = serverSocket.accept();
-                System.out.printf("Reader connected from %s.\n", socket.getLocalAddress());
-                listener = new Listener(socket, this);
-                System.out.println("Closing port...");
-                serverSocket.close();
-            }
-        } catch (IOException e) {
-            System.out.println("Port closed");
-        }
+        // Step 1: Show card insert UI
+        CardInsertPage cardPage = new CardInsertPage(() -> {
+            // Step 2: After valid card, start listener thread
+            new Thread(() -> {
+                try (ServerSocket serverSocket = new ServerSocket(12345)) {
+                    System.out.printf("Port opened @ %s. Waiting for connection...\n", 12345);
+                    Socket socket = serverSocket.accept();
+                    System.out.printf("Reader connected from %s.\n", socket.getLocalAddress());
+                    listener = new Listener(socket, this);
+                    System.out.println("Closing port...");
+                    serverSocket.close();
 
-        primaryStage.setTitle("demo");
+                    new Thread(listener).start(); // Start listening for templates
+                } catch (IOException e) {
+                    System.out.println("Port closed");
+                }
+            }).start();
+        });
+
+        primaryStage.setScene(cardPage.getScene());
+        primaryStage.setTitle("Insert Card");
         primaryStage.show();
-        new Thread(listener).start();
     }
 
     public void receiveTemplate(Template template) {
@@ -59,7 +52,7 @@ public class DisplayJavaFX extends Application {
         Platform.runLater(() -> {
             VotingMachinePage newPage = new VotingMachinePage(template);
 
-            // Set button actions
+            // Button actions
             newPage.getPreviousButton().setOnAction(event -> {
                 template.getPreviousButton().pressButton();
                 ready = true;
@@ -82,7 +75,10 @@ public class DisplayJavaFX extends Application {
     public boolean isReady() {
         return ready;
     }
-    public boolean failure() { return failed;}
+
+    public boolean failure() {
+        return failed;
+    }
 
     public Template getTemplate() {
         return template;

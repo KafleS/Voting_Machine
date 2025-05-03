@@ -1,4 +1,4 @@
-package display;
+package Display;
 
 import javafx.application.Platform;
 

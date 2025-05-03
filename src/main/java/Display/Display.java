@@ -1,4 +1,4 @@
-package display;
+package Display;
 
 import java.io.IOException;
 import java.net.Socket;

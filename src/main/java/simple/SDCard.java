@@ -12,17 +12,16 @@ public class SDCard {
     private final String filepath;
     private Operation operation;
     private boolean status = false;
-    private final Operation orginalOperation; // Demo only
+
     public SDCard(int slotNumber, Operation operation) {
-        this.filepath = switch(slotNumber) {
-            case 0 -> "resources/ballot.txt";
-            case 1 -> "resources/votes1.txt";
-            case 2 -> "resources/votes2.txt";
-            default -> throw new IllegalStateException("Unexpected value: " + slotNumber);
+        System.out.println("[DEBUG] Slot number selected: " + slotNumber);
+        this.filepath = switch (slotNumber) {
+            case 0 -> "src/main/resources/ballot.txt";
+            default -> throw new IllegalStateException("Only slot 0 (ballot.txt) is supported.");
         };
         this.operation = operation;
-        orginalOperation = operation;
     }
+
 
     public List<String> read() throws IOException {
         if (operation == Operation.read) {
@@ -73,7 +72,7 @@ public class SDCard {
         this.status = status;
     }
 
-    public void reinsert() {
-        operation = orginalOperation;
-    }
+//    public void reinsert() {
+//        operation = orginalOperation;
+//    }
 }

@@ -38,7 +38,7 @@ public class BallotBuilder {
 
     public void buildJSON() {
         ObjectMapper mapper = new ObjectMapper();
-        String fileName = ("slot1.txt");
+        String fileName = ("ballot.txt");
 
         try {
             mapper.enable(SerializationFeature.INDENT_OUTPUT);
