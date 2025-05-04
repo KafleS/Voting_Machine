@@ -32,9 +32,20 @@ public class CardInsertPage {
         submitButton.setOnAction(e -> {
             String cardId = cardInput.getText().trim();
 
+            if (cardReader.failure()) {
+                prompt.setText("Card reader malfunction. Please contact technician.");
+                return;
+            }
+
+            if (cardReader.isCardPresent()) {
+                prompt.setText("A card is already inserted. Please eject it first.");
+                return;
+            }
+
             try {
                 cardReader.insertCard(cardId);
                 CardType type = cardReader.getCardType();
+                System.out.println("Card inserted: " + cardReader.readCard());
 
                 switch (type) {
                     case ADMIN:
