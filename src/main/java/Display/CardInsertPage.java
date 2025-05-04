@@ -66,10 +66,10 @@ public class CardInsertPage {
             }
         });
 
-        voterPage.getSubmitButton().setOnAction(e -> {
-            System.out.println("Submitted vote for: " + current.getTitle());
-            stage.setScene(new CardInsertPage(stage).getScene());
-        });
+//        voterPage.getSubmitButton().setOnAction(e -> {
+//            System.out.println("Submitted vote for: " + current.getTitle());
+//            stage.setScene(new CardInsertPage(stage).getScene());
+//        });
 
         voterPage.getNextButton().setOnAction(e -> {
             if (index < templates.size() - 1) {

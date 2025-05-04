@@ -12,7 +12,8 @@ public class Template implements Serializable {
     private final QuestionInfo questionData; // QuestionInfo
 
     // Constructor
-    public Template(String title, String description, String instructions, ButtonData PreviousButton, ButtonData SubmitButton, ButtonData NextButton, QuestionInfo questionData) {
+    public Template(String title, String description, String instructions,
+                    ButtonData PreviousButton, ButtonData SubmitButton, ButtonData NextButton, QuestionInfo questionData) {
         this.title = title;
         this.description = description;
         this.instructions = instructions;
