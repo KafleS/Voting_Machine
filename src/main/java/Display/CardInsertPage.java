@@ -1,5 +1,6 @@
 package Display;
 
+import Cards.CardType;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -7,39 +8,98 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import simple.CardReader;
+import Managers.AdminManager;
+import simple.SDCard;
+import simple.LLSensor;
+import simple.TPSensor;
+import simple.Battery;
 
 import java.util.List;
 
 public class CardInsertPage {
     private final Scene scene;
+    private final CardReader cardReader;
 
     public CardInsertPage(Stage stage) {
-        Label prompt = new Label("Insert Card (e.g., admin, voter):");
+        this.cardReader = new CardReader();
+
+        Label prompt = new Label("Insert Card (e.g., A12345678 or V12345678):");
         TextField cardInput = new TextField();
-        cardInput.setPromptText("Enter card type...");
+        cardInput.setPromptText("Enter card ID...");
         Button submitButton = new Button("Submit");
 
         submitButton.setOnAction(e -> {
-            String input = cardInput.getText().trim().toLowerCase();
+            String cardId = cardInput.getText().trim();
 
-            if (input.equals("admin")) {
-                AdminPage adminPage = new AdminPage(stage);
-                stage.setScene(adminPage.getScene());
+            try {
+                cardReader.insertCard(cardId);
+                CardType type = cardReader.getCardType();
 
-            } else if (input.equals("voter")) {
-                if (DisplayMain.isVotingOpen()) {
-                    List<Template> templates = DisplayMain.getLoadedTemplates();
-                    if (templates != null && !templates.isEmpty()) {
-                        displayVoterTemplates(stage, templates, 0);
-                    } else {
-                        prompt.setText("Ballot data not available yet.");
-                    }
-                } else {
-                    prompt.setText("Voting is not open yet. Ask admin.");
+                switch (type) {
+                    case ADMIN:
+                        VBox adminLayout = new VBox(20);
+                        adminLayout.setAlignment(Pos.CENTER);
+                        Label adminLabel = new Label("Admin Menu");
+                        Button startVotingBtn = new Button("Open Voting Session");
+                        Label statusLabel = new Label();
+                        Button ejectButton = new Button("Eject Card");
+                        ejectButton.setVisible(false);
+
+                        LLSensor latch = new LLSensor();
+                        TPSensor tpSensor = new TPSensor(latch);
+                        SDCard sdCard = new SDCard(0, SDCard.Operation.read);
+
+                        AdminManager adminManager = new AdminManager(
+                                sdCard,
+                                latch,
+                                tpSensor,
+                                new Battery()
+                        );
+
+                        startVotingBtn.setOnAction(ev -> {
+                            boolean started = adminManager.startVotingSession();
+                            if (started) {
+                                statusLabel.setText("\u2705 Voting session has started.");
+                                ejectButton.setVisible(true);
+                            } else {
+                                statusLabel.setText("\u274C Could not start session. Check hardware/ballot.");
+                            }
+                        });
+
+                        ejectButton.setOnAction(ev -> {
+                            try {
+                                cardReader.ejectCard();
+                                stage.setScene(new CardInsertPage(stage).getScene());
+                            } catch (Exception ex) {
+                                statusLabel.setText("Eject failed: " + ex.getMessage());
+                            }
+                        });
+
+                        adminLayout.getChildren().addAll(adminLabel, startVotingBtn, statusLabel, ejectButton);
+                        Scene adminScene = new Scene(adminLayout, 600, 800);
+                        stage.setScene(adminScene);
+                        break;
+
+                    case VOTER:
+                        if (DisplayMain.isVotingOpen()) {
+                            List<Template> templates = DisplayMain.getLoadedTemplates();
+                            if (templates != null && !templates.isEmpty()) {
+                                displayVoterTemplates(stage, templates, 0);
+                            } else {
+                                prompt.setText("Ballot data not available yet.");
+                            }
+                        } else {
+                            prompt.setText("Voting is not open yet. Ask admin.");
+                        }
+                        break;
+
+                    default:
+                        prompt.setText("Invalid card. Must start with A/V followed by 8 digits.");
                 }
 
-            } else {
-                prompt.setText("Invalid card. Try 'admin' or 'voter'");
+            } catch (Exception ex) {
+                prompt.setText("Error: " + ex.getMessage());
             }
         });
 
@@ -65,11 +125,6 @@ public class CardInsertPage {
                 stage.setScene(new CardInsertPage(stage).getScene());
             }
         });
-
-//        voterPage.getSubmitButton().setOnAction(e -> {
-//            System.out.println("Submitted vote for: " + current.getTitle());
-//            stage.setScene(new CardInsertPage(stage).getScene());
-//        });
 
         voterPage.getNextButton().setOnAction(e -> {
             if (index < templates.size() - 1) {

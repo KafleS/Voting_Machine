@@ -1,5 +1,7 @@
 package simple;
 
+import Cards.CardType;
+
 import java.io.IOException;
 
 public class CardReader {
@@ -18,6 +20,13 @@ public class CardReader {
             throw new IOException("No card present to read.");
         }
         return cardData;
+    }
+
+    public CardType getCardType() throws IOException {
+        if (!isCardInserted || cardData == null) {
+            throw new IOException("No card present to check type.");
+        }
+        return CardType.resolve(cardData);
     }
 
     public void eraseCard() throws IOException {
