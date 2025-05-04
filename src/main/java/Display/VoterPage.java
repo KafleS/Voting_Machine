@@ -1,8 +1,11 @@
 package Display;
 
+import  simple.SDCard;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -14,8 +17,6 @@ import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,11 +25,19 @@ public class VoterPage {
     private final Button previousButton;
     private final Button submitButton;
     private final Button nextButton;
-    private final List<String> selectedOptions = new ArrayList<>();
+    private static final java.util.Map<String, VoteData> allSelectedVotes = new java.util.HashMap<>();
     private final Template template;
 
     public VoterPage(Template t) {
         this.template = t;
+
+
+        Label id = new Label(String.valueOf(t.getId()));
+        id.setAlignment(Pos.CENTER);
+        id.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        id.setMinHeight(40);
+        id.setMaxHeight(40);
+        id.setMaxWidth(600);
 
         // Title
         Label title = new Label(t.getTitle());
@@ -68,11 +77,16 @@ public class VoterPage {
             button.setStyle("-fx-font-size: 18px;");
 
             button.setOnAction(e -> {
-                if (!selectedOptions.contains(option)) {
-                    selectedOptions.add(option);
-                }
+                VoteData vote = new VoteData(
+                        String.valueOf(template.getId()),
+                        template.getTitle(),
+                        template.getDescription(),
+                        option
+                );
+                allSelectedVotes.put(vote.id, vote);
+                System.out.println("Saved: " + vote.id + " → " + vote.option);
+                System.out.println("all selected votes: " + allSelectedVotes.keySet());
             });
-
             optionsBox.getChildren().add(button);
         }
 
@@ -124,6 +138,20 @@ public class VoterPage {
         scene = new Scene(mainContent, 600, 800);
     }
 
+    private static class VoteData {
+        String id;
+        String title;
+        String description;
+        String option;
+
+        VoteData(String id, String title, String description, String option) {
+            this.id = id;
+            this.title = title;
+            this.description = description;
+            this.option = option;
+        }
+    }
+
     private void setDimensionsOnButton(Button button) {
         button.setMinSize(200, 80);
         button.setMaxSize(200, 80);
@@ -132,53 +160,74 @@ public class VoterPage {
 
 
     private void submitVote() {
-        if (selectedOptions.isEmpty()) {
-            System.out.println("No selection made.");
+        if (allSelectedVotes.isEmpty()) {
+            System.out.println("No selections made.");
             return;
         }
 
         ObjectMapper mapper = new ObjectMapper();
 
-        // Define both output files
-        File file1 = new File("voter1.txt");
-        File file2 = new File("voter2.txt");
-
         try {
-            // Initialize or load existing data for both files
-            ArrayNode root1 = file1.exists() && file1.length() > 0
-                    ? (ArrayNode) mapper.readTree(file1)
-                    : mapper.createArrayNode();
+            // Read existing data
+            SDCard readCard1 = new SDCard(1, SDCard.Operation.read);
+            SDCard readCard2 = new SDCard(2, SDCard.Operation.read);
 
-            ArrayNode root2 = file2.exists() && file2.length() > 0
-                    ? (ArrayNode) mapper.readTree(file2)
-                    : mapper.createArrayNode();
-
-            // Create vote entry for each selected option
-            for (String selected : selectedOptions) {
-                ObjectNode vote = mapper.createObjectNode();
-                vote.put("title", template.getTitle());
-                vote.put("description", template.getDescription());
-                vote.put("selectedOption", selected);
-
-                root1.add(vote);
-                root2.add(vote.deepCopy()); // deepCopy to avoid shared reference
+            ArrayNode root1 = mapper.createArrayNode();
+            String json1 = String.join("\n", readCard1.read());
+            if (!json1.isBlank()) {
+                root1 = (ArrayNode) mapper.readTree(json1);
             }
 
-            // Save both files
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file1, root1);
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file2, root2);
+            ArrayNode root2 = mapper.createArrayNode();
+            String json2 = String.join("\n", readCard2.read());
+            if (!json2.isBlank()) {
+                root2 = (ArrayNode) mapper.readTree(json2);
+            }
 
-            System.out.println("Votes recorded to voter1.txt and voter2.txt: " + selectedOptions);
-            selectedOptions.clear(); // reset
+            // Remove previous entries by ID
+            for (String id : allSelectedVotes.keySet()) {
+                for (int i = root1.size() - 1; i >= 0; i--) {
+                    if (root1.get(i).get("id").asText().equals(id)) {
+                        root1.remove(i);
+                    }
+                }
+                for (int i = root2.size() - 1; i >= 0; i--) {
+                    if (root2.get(i).get("id").asText().equals(id)) {
+                        root2.remove(i);
+                    }
+                }
+            }
 
-        } catch (IOException ex) {
-            ex.printStackTrace();
+            for (String id : allSelectedVotes.keySet()) {
+                VoteData voteData = allSelectedVotes.get(id);
+                ObjectNode vote = mapper.createObjectNode();
+                vote.put("id", voteData.id);
+                vote.put("title", voteData.title);
+                vote.put("description", voteData.description);
+                vote.put("selectedOption", voteData.option);
+
+                root1.add(vote);
+                root2.add(vote.deepCopy());
+            }
+
+            // Write to files
+            new SDCard(1, SDCard.Operation.overwrite)
+                    .overwrite(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root1));
+            new SDCard(2, SDCard.Operation.overwrite)
+                    .overwrite(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root2));
+
+            System.out.println(" All votes saved.");
+            allSelectedVotes.clear();
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
-
 
     public Scene getScene() { return scene; }
     public Button getPreviousButton() { return previousButton; }
     public Button getSubmitButton() { return submitButton; }
     public Button getNextButton() { return nextButton; }
 }
+
+
