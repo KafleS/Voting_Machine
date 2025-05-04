@@ -10,6 +10,11 @@ import java.util.List;
 
 public class DisplayMain extends Application {
     private Display display;
+    private static Stage primaryStage;
+
+    public static Stage getPrimaryStage() {
+        return primaryStage;
+    }
 
     private static boolean isVotingOpen = false;
     private static Ballot loadedBallot;
@@ -36,13 +41,14 @@ public class DisplayMain extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage stage) {
+        primaryStage = stage;
         CardInsertPage cardPage = new CardInsertPage(primaryStage);
         primaryStage.setTitle("Insert Card");
         primaryStage.setScene(cardPage.getScene());
         primaryStage.show();
 
-        new Thread(() -> runDisplayLogic(primaryStage)).start();
+        new Thread(() -> runDisplayLogic(stage)).start();
     }
 
     private void runDisplayLogic(Stage stage) {

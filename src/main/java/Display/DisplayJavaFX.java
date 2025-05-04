@@ -18,8 +18,8 @@ public class DisplayJavaFX extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-
-       startServerOnly();
+        this.stage = primaryStage;
+        startServerOnly();
     }
 
     private void startServerOnly() {
@@ -45,7 +45,7 @@ public class DisplayJavaFX extends Application {
         ready = false;
 
         Platform.runLater(() -> {
-            VoterPage newPage = new VoterPage(template);
+            VoterPage newPage = new VoterPage(template,stage);
 
             // Button actions
             newPage.getPreviousButton().setOnAction(event -> {

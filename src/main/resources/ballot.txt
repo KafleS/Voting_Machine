@@ -10,13 +10,13 @@
     "id" : 0,
     "title" : "President",
     "description" : "US president",
-    "options" : [ "triump", "biuden" ],
+    "options" : [ "trump", "biden" ],
     "maxSelections" : 1
   }, {
     "id" : 1,
     "title" : "vice",
     "description" : "us vice president",
-    "options" : [ "jay", "kit" ],
+    "options" : [ "Kamala", "JD Vance" ],
     "maxSelections" : 1
   } ]
 }

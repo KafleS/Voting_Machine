@@ -143,7 +143,7 @@ public class CardInsertPage {
 
     private void displayVoterTemplates(Stage stage, List<Template> templates, int index) {
         Template current = templates.get(index);
-        VoterPage voterPage = new VoterPage(current);
+        VoterPage voterPage = new VoterPage(current,stage);
 
         voterPage.getPreviousButton().setOnAction(e -> {
             if (index > 0) {

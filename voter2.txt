@@ -1,0 +1,11 @@
+[ {
+  "id" : "0",
+  "title" : "President",
+  "description" : "US president",
+  "selectedOption" : "trump"
+}, {
+  "id" : "1",
+  "title" : "vice",
+  "description" : "us vice president",
+  "selectedOption" : "Kamala"
+} ]
