@@ -18,30 +18,25 @@ public class DisplayJavaFX extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        this.stage = primaryStage;
 
-        // Step 1: Show card insert UI
-        CardInsertPage cardPage = new CardInsertPage(() -> {
-            // Step 2: After valid card, start listener thread
-            new Thread(() -> {
-                try (ServerSocket serverSocket = new ServerSocket(12345)) {
-                    System.out.printf("Port opened @ %s. Waiting for connection...\n", 12345);
-                    Socket socket = serverSocket.accept();
-                    System.out.printf("Reader connected from %s.\n", socket.getLocalAddress());
-                    listener = new Listener(socket, this);
-                    System.out.println("Closing port...");
-                    serverSocket.close();
+       startServerOnly();
+    }
 
-                    new Thread(listener).start(); // Start listening for templates
-                } catch (IOException e) {
-                    System.out.println("Port closed");
-                }
-            }).start();
-        });
+    private void startServerOnly() {
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(12345)) {
+                System.out.printf("Port opened @ %s. Waiting for connection...\n", 12345);
+                Socket socket = serverSocket.accept();
+                System.out.printf("Reader connected from %s.\n", socket.getLocalAddress());
+                listener = new Listener(socket, this);
+                System.out.println("Closing port...");
+                serverSocket.close();
 
-        primaryStage.setScene(cardPage.getScene());
-        primaryStage.setTitle("Insert Card");
-        primaryStage.show();
+                new Thread(listener).start();
+            } catch (IOException e) {
+                System.out.println("Port closed or error occurred.");
+            }
+        }).start();
     }
 
     public void receiveTemplate(Template template) {
@@ -50,7 +45,7 @@ public class DisplayJavaFX extends Application {
         ready = false;
 
         Platform.runLater(() -> {
-            VotingMachinePage newPage = new VotingMachinePage(template);
+            VoterPage newPage = new VoterPage(template);
 
             // Button actions
             newPage.getPreviousButton().setOnAction(event -> {
@@ -85,6 +80,6 @@ public class DisplayJavaFX extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        Application.launch(args);
     }
 }
