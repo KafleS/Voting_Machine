@@ -3,6 +3,7 @@ package Display;
 import java.io.Serializable;
 
 public class Template implements Serializable {
+    private final int id;
     private final String title;
     private final String description;
     private final String instructions;
@@ -12,8 +13,9 @@ public class Template implements Serializable {
     private final QuestionInfo questionData; // QuestionInfo
 
     // Constructor
-    public Template(String title, String description, String instructions,
+    public Template(int id, String title, String description, String instructions,
                     ButtonData PreviousButton, ButtonData SubmitButton, ButtonData NextButton, QuestionInfo questionData) {
+        this.id = id;
         this.title = title;
         this.description = description;
         this.instructions = instructions;
@@ -23,6 +25,7 @@ public class Template implements Serializable {
         this.questionData = questionData;
     }
 
+    public int getId() {return id;}
     public String getTitle() {return title;}
     public String getDescription() {return description;}
     public String getInstructions() {return instructions;}

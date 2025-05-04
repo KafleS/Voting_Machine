@@ -24,6 +24,7 @@ public class TemplateFactory {
             }
 
             templates.add(new Template(
+                    p.getId(),
                     p.getTitle(),
                     p.getDescription(),
                     instruction,
