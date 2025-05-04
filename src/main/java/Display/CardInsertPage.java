@@ -6,26 +6,38 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import java.util.List;
 
 public class CardInsertPage {
     private final Scene scene;
-    private final TextField cardInput;
-    private final Button submitButton;
 
-    public CardInsertPage(Runnable onValidCard) {
+    public CardInsertPage(Stage stage) {
         Label prompt = new Label("Insert Card (e.g., admin, voter):");
-        prompt.setStyle("-fx-font-size: 16px;");
-
-        cardInput = new TextField();
+        TextField cardInput = new TextField();
         cardInput.setPromptText("Enter card type...");
-        cardInput.setMaxWidth(300);
+        Button submitButton = new Button("Submit");
 
-        submitButton = new Button("Submit");
-        submitButton.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
         submitButton.setOnAction(e -> {
             String input = cardInput.getText().trim().toLowerCase();
-            if (input.equals("admin") || input.equals("voter")) {
-                onValidCard.run(); // Load the rest of the UI
+
+            if (input.equals("admin")) {
+                AdminPage adminPage = new AdminPage(stage);
+                stage.setScene(adminPage.getScene());
+
+            } else if (input.equals("voter")) {
+                if (DisplayMain.isVotingOpen()) {
+                    List<Template> templates = DisplayMain.getLoadedTemplates();
+                    if (templates != null && !templates.isEmpty()) {
+                        displayVoterTemplates(stage, templates, 0);
+                    } else {
+                        prompt.setText("Ballot data not available yet.");
+                    }
+                } else {
+                    prompt.setText("Voting is not open yet. Ask admin.");
+                }
+
             } else {
                 prompt.setText("Invalid card. Try 'admin' or 'voter'");
             }
@@ -40,5 +52,31 @@ public class CardInsertPage {
 
     public Scene getScene() {
         return scene;
+    }
+
+    private void displayVoterTemplates(Stage stage, List<Template> templates, int index) {
+        Template current = templates.get(index);
+        VoterPage voterPage = new VoterPage(current);
+
+        voterPage.getPreviousButton().setOnAction(e -> {
+            if (index > 0) {
+                displayVoterTemplates(stage, templates, index - 1);
+            } else {
+                stage.setScene(new CardInsertPage(stage).getScene());
+            }
+        });
+
+        voterPage.getSubmitButton().setOnAction(e -> {
+            System.out.println("Submitted vote for: " + current.getTitle());
+            stage.setScene(new CardInsertPage(stage).getScene());
+        });
+
+        voterPage.getNextButton().setOnAction(e -> {
+            if (index < templates.size() - 1) {
+                displayVoterTemplates(stage, templates, index + 1);
+            }
+        });
+
+        stage.setScene(voterPage.getScene());
     }
 }

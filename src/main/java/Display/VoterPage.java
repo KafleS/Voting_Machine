@@ -1,6 +1,5 @@
 package Display;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -10,13 +9,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
-public class VotingMachinePage {
+public class VoterPage {
     private final Scene scene;
     private final Button previousButton;
     private final Button submitButton;
     private final Button nextButton;
 
-    public VotingMachinePage(Template t) {
+    public VoterPage(Template t) {
         // Title
         Label title = new Label(t.getTitle());
         title.setAlignment(Pos.CENTER);
