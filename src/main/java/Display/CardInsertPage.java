@@ -20,6 +20,7 @@ import java.util.List;
 public class CardInsertPage {
     private final Scene scene;
     private final CardReader cardReader;
+    private static boolean votingOpen = false;
 
     public CardInsertPage(Stage stage) {
         this.cardReader = new CardReader();
@@ -45,6 +46,13 @@ public class CardInsertPage {
             try {
                 cardReader.insertCard(cardId);
                 CardType type = cardReader.getCardType();
+
+                if (type == CardType.UNKNOWN) {
+                    cardReader.ejectCard();
+                    prompt.setText("Invalid card. Must start with A/V followed by 8 digits.");
+                    return;
+                }
+
                 System.out.println("Card inserted: " + cardReader.readCard());
 
                 switch (type) {
@@ -52,10 +60,9 @@ public class CardInsertPage {
                         VBox adminLayout = new VBox(20);
                         adminLayout.setAlignment(Pos.CENTER);
                         Label adminLabel = new Label("Admin Menu");
-                        Button startVotingBtn = new Button("Open Voting Session");
+                        Button controlVotingBtn = new Button();
                         Label statusLabel = new Label();
                         Button ejectButton = new Button("Eject Card");
-                        ejectButton.setVisible(false);
 
                         LLSensor latch = new LLSensor();
                         TPSensor tpSensor = new TPSensor(latch);
@@ -68,15 +75,26 @@ public class CardInsertPage {
                                 new Battery()
                         );
 
-                        startVotingBtn.setOnAction(ev -> {
-                            boolean started = adminManager.startVotingSession();
-                            if (started) {
-                                statusLabel.setText("\u2705 Voting session has started.");
-                                ejectButton.setVisible(true);
-                            } else {
-                                statusLabel.setText("\u274C Could not start session. Check hardware/ballot.");
-                            }
-                        });
+                        if (!votingOpen) {
+                            controlVotingBtn.setText("Open Voting Session");
+                            controlVotingBtn.setOnAction(ev -> {
+                                boolean started = adminManager.startVotingSession();
+                                if (started) {
+                                    votingOpen = true;
+                                    statusLabel.setText("\u2705 Voting session has started.");
+                                    controlVotingBtn.setText("Close Voting Session");
+                                } else {
+                                    statusLabel.setText("\u274C Could not start session. Check hardware/ballot.");
+                                }
+                            });
+                        } else {
+                            controlVotingBtn.setText("Close Voting Session");
+                            controlVotingBtn.setOnAction(ev -> {
+                                votingOpen = false;
+                                statusLabel.setText("\u2705 Voting session closed.");
+                                controlVotingBtn.setDisable(true);
+                            });
+                        }
 
                         ejectButton.setOnAction(ev -> {
                             try {
@@ -87,13 +105,13 @@ public class CardInsertPage {
                             }
                         });
 
-                        adminLayout.getChildren().addAll(adminLabel, startVotingBtn, statusLabel, ejectButton);
+                        adminLayout.getChildren().addAll(adminLabel, controlVotingBtn, statusLabel, ejectButton);
                         Scene adminScene = new Scene(adminLayout, 600, 800);
                         stage.setScene(adminScene);
                         break;
 
                     case VOTER:
-                        if (DisplayMain.isVotingOpen()) {
+                        if (votingOpen) {
                             List<Template> templates = DisplayMain.getLoadedTemplates();
                             if (templates != null && !templates.isEmpty()) {
                                 displayVoterTemplates(stage, templates, 0);
@@ -102,11 +120,9 @@ public class CardInsertPage {
                             }
                         } else {
                             prompt.setText("Voting is not open yet. Ask admin.");
+                            cardReader.ejectCard();
                         }
                         break;
-
-                    default:
-                        prompt.setText("Invalid card. Must start with A/V followed by 8 digits.");
                 }
 
             } catch (Exception ex) {
@@ -140,6 +156,24 @@ public class CardInsertPage {
         voterPage.getNextButton().setOnAction(e -> {
             if (index < templates.size() - 1) {
                 displayVoterTemplates(stage, templates, index + 1);
+            } else {
+                VBox finishLayout = new VBox(20);
+                finishLayout.setAlignment(Pos.CENTER);
+                Label doneLabel = new Label("✅ Your vote has been recorded.");
+                Button ejectButton = new Button("Eject Card");
+
+                ejectButton.setOnAction(ev -> {
+                    try {
+                        cardReader.ejectCard();
+                        stage.setScene(new CardInsertPage(stage).getScene());
+                    } catch (Exception ex) {
+                        doneLabel.setText("Eject failed: " + ex.getMessage());
+                    }
+                });
+
+                finishLayout.getChildren().addAll(doneLabel, ejectButton);
+                Scene finishScene = new Scene(finishLayout, 600, 800);
+                stage.setScene(finishScene);
             }
         });
 
