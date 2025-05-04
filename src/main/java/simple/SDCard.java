@@ -2,9 +2,7 @@ package simple;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.Collections;
 import java.util.List;
 
@@ -17,43 +15,53 @@ public class SDCard {
         System.out.println("[DEBUG] Slot number selected: " + slotNumber);
         this.filepath = switch (slotNumber) {
             case 0 -> "src/main/resources/ballot.txt";
-            default -> throw new IllegalStateException("Only slot 0 (ballot.txt) is supported.");
+            case 1 -> "voter1.txt";
+            case 2 -> "voter2.txt";
+            default -> throw new IllegalStateException("Unsupported slot number. Use 0, 1, or 2.");
         };
         this.operation = operation;
     }
 
-
     public List<String> read() throws IOException {
         if (operation == Operation.read) {
             return Files.readAllLines(Paths.get(filepath), StandardCharsets.UTF_8);
-        }
-        else if (operation == null) throw new IOException("No SD card in slot");
+        } else if (operation == null) throw new IOException("No SD card in slot");
         else throw new IOException("Unable to read from file as operation is not read");
     }
 
     public void write(String text) throws IOException {
         if (operation == Operation.write) {
             Path file = Paths.get(filepath);
-            List<String> txt = Files.readAllLines(file,StandardCharsets.UTF_8);
+            List<String> txt = Files.exists(file)
+                    ? Files.readAllLines(file, StandardCharsets.UTF_8)
+                    : new java.util.ArrayList<>();
             txt.add(text);
             Files.write(file, txt, StandardCharsets.UTF_8);
-        }
-        else if (operation == null) throw new IOException("No SD card in slot");
-        else throw new IOException("Unable to write from file as operation is not write");
+        } else if (operation == null) throw new IOException("No SD card in slot");
+        else throw new IOException("Unable to write to file as operation is not write");
     }
 
     /**
-     * Overwrites all text in the file with the given line. Consecutive calls of overwrite will overwrite the last call.
-     * @param text String to overwrite with
-     * @throws IOException Incorrect operating mode or SD card is not in slot
+     * Overwrites all text in the file with the given line.
+     * Consecutive calls of overwrite will overwrite the last call.
      */
     public void overwrite(String text) throws IOException {
         if (operation == Operation.overwrite) {
             Path file = Paths.get(filepath);
-            Files.write(file, Collections.singleton(text), StandardCharsets.UTF_8);
+
+            // Only create parent directory if it exists (not null)
+            Path parent = file.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            Files.write(file, Collections.singleton(text), StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } else if (operation == null) {
+            throw new IOException("No SD card in slot");
+        } else {
+            throw new IOException("Unable to overwrite file as operation is not overwrite");
         }
-        else if (operation == null) throw new IOException("No SD card in slot");
-        else throw new IOException("Unable to overwrite from file as operation is not overwrite");
     }
 
     public void eject() {
@@ -71,8 +79,4 @@ public class SDCard {
     public void setFailure(boolean status) {
         this.status = status;
     }
-
-//    public void reinsert() {
-//        operation = orginalOperation;
-//    }
 }
