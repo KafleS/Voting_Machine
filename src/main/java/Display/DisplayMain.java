@@ -1,42 +1,72 @@
 package Display;
 
 import BML.Ballot;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.stage.Stage;
 import simple.SDCard;
 
 import java.util.List;
 
-public class DisplayMain {
-    public static void main(String[] args) throws Exception {
-        // Comment out display stuff for now
-         Display display = new Display();
+public class DisplayMain extends Application {
+    private Display display;
 
+    private static boolean isVotingOpen = false;
+    private static Ballot loadedBallot;
+    private static List<Template> loadedTemplates;
 
-        SDCard sdCard = new SDCard(0, SDCard.Operation.read);
-        String json = String.join("\n", sdCard.read());
-        System.out.println("[SUCCESS] JSON read from SD card:");
-        System.out.println(json);
+    public static void setVotingOpen(boolean open) {
+        isVotingOpen = open;
+    }
 
-        // STEP 2: Convert JSON to Ballot object
-        System.out.println("\n[INFO] Converting JSON to Ballot object...");
-        Ballot ballot = new Ballot(json);
-        System.out.println("[SUCCESS] Ballot object created with " + ballot.getNumPropositions() + " propositions.");
-        System.out.println("Ballot title: " + ballot.getPreamble().getBallotTitle());
+    public static boolean isVotingOpen() {
+        return isVotingOpen;
+    }
 
-        // STEP 3: Convert Ballot into a list of Template objects
-        System.out.println("\n[INFO] Converting Ballot to Template objects...");
-        List<Template> templates = TemplateFactory.fromBallot(ballot);
-        System.out.println("[SUCCESS] Created " + templates.size() + " template(s).");
+    public static Ballot getLoadedBallot() {
+        return loadedBallot;
+    }
 
+    public static List<Template> getLoadedTemplates() {
+        return loadedTemplates;
+    }
 
+    public static void main(String[] args) {
+        launch(args);
+    }
 
-         System.out.println("\n[INFO] Sending templates to screen for display...");
-         for (Template t : templates) {
-             display.sendTemplate(t);
-             while (!display.isReady()) {
-                 Thread.sleep(1000);
-             }
-         }
+    @Override
+    public void start(Stage primaryStage) {
+        CardInsertPage cardPage = new CardInsertPage(primaryStage);
+        primaryStage.setTitle("Insert Card");
+        primaryStage.setScene(cardPage.getScene());
+        primaryStage.show();
 
-        System.out.println("[DONE] Debug phase complete — no templates sent to screen.");
+        new Thread(() -> runDisplayLogic(primaryStage)).start();
+    }
+
+    private void runDisplayLogic(Stage stage) {
+        try {
+            display = new Display();
+
+            SDCard sdCard = new SDCard(0, SDCard.Operation.read);
+            String json = String.join("\n", sdCard.read());
+            System.out.println("[SUCCESS] JSON read from SD card:");
+            System.out.println(json);
+
+            loadedBallot = new Ballot(json);
+            loadedTemplates = TemplateFactory.fromBallot(loadedBallot);
+
+            System.out.println("\n[INFO] Sending templates to screen for display...");
+            for (Template t : loadedTemplates) {
+                display.sendTemplate(t);
+                while (!display.isReady()) {
+                    Thread.sleep(1000);
+                }
+            }
+            System.out.println("[DONE] All templates sent to screen.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
